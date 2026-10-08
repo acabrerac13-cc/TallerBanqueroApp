@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taller Banquero</title>
+    <meta name="description" content="Simulador educativo 2D del Algoritmo del Banquero de Dijkstra.">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Encabezado Compacto -->
+    <header class="app-header">
+        <div class="brand-section">
+            <div class="brand-icon">🔨</div>
+            <h1 class="brand-title">Taller Banquero</h1>
+        </div>
+
+        <div class="header-actions">
+            <!-- Selector de Escenario con Acciones Rápidas Integradas -->
+            <div class="scenario-selector">
+                <label for="scenario-select">Escenario:</label>
+                <select id="scenario-select" class="scenario-select">
+                    <option value="aprender">1: Aprender (5, 3)</option>
+                    <option value="prestamo_peligroso">2: Préstamo Peligroso (10, 5, 7)</option>
+                    <option value="inicial_inseguro">3: Inicial Inseguro (4, 2)</option>
+                    <option value="custom" disabled>Personalizado</option>
+                </select>
+            </div>
+
+            <!-- Controles de Simulación -->
+            <div class="btn-group">
+                <button id="btn-auto-demo" class="btn btn-primary" title="Control de demostración automática">
+                    ▶️ Iniciar
+                </button>
+                <button id="btn-pause" class="btn btn-secondary" title="Pausar o reanudar" disabled>
+                    ⏸️ Pausar
+                </button>
+                <button id="btn-step" class="btn btn-secondary" title="Avanzar un paso">
+                    ⏭️ Paso a Paso
+                </button>
+                <button id="btn-reset" class="btn btn-outline" title="Reiniciar el escenario">
+                    🔄 Reiniciar
+                </button>
+            </div>
+
+            <!-- Control de Velocidad -->
+            <div class="speed-control">
+                <span>Velocidad:</span>
+                <button class="speed-btn" data-speed="0.5">0.5x</button>
+                <button class="speed-btn active" data-speed="1.0">1.0x</button>
+                <button class="speed-btn" data-speed="2.0">2.0x</button>
+            </div>
+
+            <!-- Configurar Taller y Guía -->
+            <button id="btn-configure" class="btn btn-warning" title="Configurar trabajadores y herramientas">
+                ⚙️ Configurar Taller
+            </button>
+            <button id="btn-open-guide" class="btn btn-secondary" title="Abrir Guía Didáctica">
+                ❓ Guía Didáctica
+            </button>
+            <button id="btn-toggle-sound" class="btn btn-secondary" title="Sonido">
+                🔊 Sonido
+            </button>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="main-container">
+
+        <!-- ESCENA 2D ANIMADA DEL TALLER -->
+        <section class="workshop-stage-wrapper" aria-label="Escena 2D del Taller del Banquero">
+            
+            <!-- Barra flotante de estado en las esquinas superiores -->
+            <div class="stage-status-bar">
+                <div id="stage-status-badge" class="status-badge safe">
+                    <span>🛡️</span>
+                    <span id="status-badge-text">ESTADO SEGURO</span>
+                </div>
+
+                <div class="conservation-badge">
+                    <span>⚖️</span>
+                    <span id="conservation-text">Conservación: 100%</span>
+                </div>
+            </div>
+
+            <!-- Toast / Notificación temporal en escena -->
+            <div id="stage-toast" class="stage-toast" style="display: none;"></div>
+
+            <!-- Lienzo SVG Interactivo -->
+            <div class="workshop-svg-container">
+                <svg id="workshop-svg" class="workshop-svg"></svg>
+            </div>
+        </section>
+
+        <!-- PANEL DE INTERACCIÓN MANUAL Y ESTADO -->
+        <div class="bottom-control-grid">
+            
+            <!-- TARJETA: Gestión del Trabajador Seleccionado -->
+            <section class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span>👷</span>
+                        <span id="selected-worker-title">Trabajador P0</span>
+                    </div>
+                    <span class="panel-badge">Interacción Manual</span>
+                </div>
+
+                <!-- Pestañas de Selección de Trabajador -->
+                <div id="worker-tabs" class="worker-selection-row">
+                    <!-- Botones P0, P1... inyectados dinámicamente -->
+                </div>
+
+                <!-- Métricas del Trabajador Seleccionado -->
+                <div class="worker-status-summary">
+                    <div class="summary-metric">
+                        <span class="metric-label">Asignado (C)</span>
+                        <span id="metric-alloc" class="metric-value" style="color: #38bdf8;">[1, 0]</span>
+                    </div>
+                    <div class="summary-metric">
+                        <span class="metric-label">Máximo (M)</span>
+                        <span id="metric-max" class="metric-value">[3, 2]</span>
+                    </div>
+                    <div class="summary-metric">
+                        <span class="metric-label">Necesidad (N = M - C)</span>
+                        <span id="metric-need" class="metric-value" style="color: var(--primary);">[2, 2]</span>
+                    </div>
+                </div>
+
+                <!-- Formulario de Solicitud de Herramientas -->
+                <div class="request-form">
+                    <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">
+                        Cantidad de herramientas solicitadas al almacén:
+                    </div>
+
+                    <div id="resource-inputs-grid" class="resource-inputs-grid">
+                        <!-- Inputs numéricos inyectados dinámicamente -->
+                    </div>
+
+                    <div class="request-actions-row">
+                        <button id="btn-evaluate" class="btn btn-primary" title="Evaluar solicitud">
+                            🔍 Evaluar Solicitud
+                        </button>
+                        <button id="btn-apply-loan" class="btn btn-success" title="El trabajador camina y recibe las herramientas" disabled>
+                            🤝 Aplicar Préstamo
+                        </button>
+                        <button id="btn-work-finish" class="btn btn-warning" title="El trabajador completa su labor y devuelve todas sus herramientas" disabled>
+                            ⚙️ Trabajar y Terminar
+                        </button>
+                        <button id="btn-view-trial" class="btn btn-info" title="Ver la simulación hipotética paso a paso" disabled>
+                            🧪 Ver Ensayo de Seguridad
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dictamen del Banquero con explicación de cada acción -->
+                <div class="banker-decision-box">
+                    <div class="decision-box-header">
+                        <div class="decision-title">
+                            <span>📋</span>
+                            <span>Dictamen del Banquero</span>
+                        </div>
+                        <span id="decision-badge" class="decision-badge-pill">Listo</span>
+                    </div>
+                    <p id="decision-text" class="decision-text">
+                        Selecciona un trabajador, ingresa cuántas herramientas solicita y pulsa "Evaluar Solicitud".
+                    </p>
+                </div>
+            </section>
+
+            <!-- TARJETA: Almacén Central e Inventario de Herramientas -->
+            <section class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span>🏬</span>
+                        <span>Almacén Central (Disponible)</span>
+                    </div>
+                    <span class="panel-badge">Herramientas Libres</span>
+                </div>
+
+                <div id="warehouse-inventory" class="warehouse-inventory-list">
+                    <!-- Tarjetas de inventario inyectadas dinámicamente -->
+                </div>
+
+                <div style="margin-top: 4px;">
+                    <div style="background: var(--bg-surface-elevated); padding: 12px; border-radius: var(--radius-md); font-size: 0.85rem; display: flex; flex-direction: column; gap: 6px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-muted); font-weight: 600;">Estado del Sistema:</span>
+                            <span id="calc-state-pill" class="status-badge safe" style="padding: 2px 10px; font-size: 0.75rem;">SEGURO</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-muted); font-weight: 600;">Secuencia segura garantizada:</span>
+                            <span id="calc-sequence-text" style="font-family: monospace; font-weight: 700; color: #34d399;">&lt;P1, P0, P2&gt;</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(59, 130, 246, 0.08); border-left: 3px solid var(--accent-blue); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 0.8rem; color: #cbd5e1; margin-top: auto;">
+                    💡 <strong>Algoritmo del Banquero:</strong> El banquero aprueba un préstamo únicamente si, en el peor escenario (donde todos demandan su máximo restante), existe una secuencia segura que garantiza que todos puedan terminar sin bloquearse.
+                </div>
+            </section>
+        </div>
+
+        <!-- SECCIÓN COLAPSABLE: Matrices y Cálculos Formales -->
+        <section class="matrices-collapsible">
+            <button id="matrices-toggle" class="collapsible-trigger">
+                <span style="display: flex; align-items: center; gap: 8px;">
+                    <span>📊</span>
+                    <span>Ver Matrices y Cálculos Detallados (Total, Asignado, Máximo, Necesidad, Disponible)</span>
+                </span>
+                <span id="matrices-arrow">▼</span>
+            </button>
+
+            <div id="matrices-content" class="matrices-content collapsed">
+                <div class="table-responsive">
+                    <table class="matrix-table">
+                        <thead>
+                            <tr id="matrix-res-headers"></tr>
+                        </thead>
+                        <tbody id="matrix-table-body"></tbody>
+                        <tfoot id="matrix-table-foot"></tfoot>
+                    </table>
+                </div>
+
+                <!-- Tarjetas Teóricas Aclaratorias -->
+                <div class="theory-cards-grid">
+                    <div class="theory-card">
+                        <strong>1. Estado Inseguro ≠ Interbloqueo</strong>
+                        Un estado inseguro no significa necesariamente que ya exista un bloqueo mutuo, sino que el sistema no puede garantizar evitarlo si todos demandan su máximo simultáneamente.
+                    </div>
+                    <div class="theory-card">
+                        <strong>2. Secuencia Segura = Posibilidad Teórica</strong>
+                        La secuencia segura calculada es una demostración matemática de que existe un camino de finalización viable; no impone un orden obligatorio de ejecución real.
+                    </div>
+                    <div class="theory-card">
+                        <strong>3. Prevención Basada en Máximos</strong>
+                        El banquero evita asignaciones inseguras exigiendo que cada proceso declare de antemano su requerimiento máximo de herramientas.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL: Ensayo de Seguridad del Banquero (Hipotético) -->
+    <div id="modal-trial" class="modal-backdrop">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>🧪</span>
+                    <span id="modal-trial-title">Ensayo de Seguridad del Banquero</span>
+                </div>
+                <button id="modal-trial-close" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="trial-banner-warning">
+                    <span>⚠️</span>
+                    <div>
+                        <strong>ENSAYO HIPOTÉTICO: No modifica el taller real</strong><br>
+                        El banquero analiza esta entrega en su libro de cuentas antes de entregar físicamente las herramientas. Durante el ensayo, Trabajo (Work) copia el Disponible provisional y suma únicamente el Asignado de cada proceso que puede terminar.
+                    </div>
+                </div>
+
+                <div id="trial-result-banner" class="trial-step-card success"></div>
+
+                <div style="font-weight: 700; font-size: 0.9rem; color: #fff; margin-top: 6px;">
+                    Comprobación paso a paso del ensayo:
+                </div>
+
+                <div id="trial-steps-list" class="trial-steps-container"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('modal-trial').classList.remove('active')">
+                    Cerrar Ensayo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Configurar Taller Dinámicamente -->
+    <div id="modal-config" class="modal-backdrop">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>⚙️</span>
+                    <span>Configurar Taller y Algoritmo</span>
+                </div>
+                <button id="modal-config-close" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="config-grid-selectors">
+                    <div class="config-input-group">
+                        <label for="config-num-p">Número de Trabajadores (Procesos):</label>
+                        <select id="config-num-p" class="config-select">
+                            <option value="1">1 Trabajador (P0)</option>
+                            <option value="2">2 Trabajadores (P0, P1)</option>
+                            <option value="3" selected>3 Trabajadores (P0, P1, P2)</option>
+                            <option value="4">4 Trabajadores (P0 - P3)</option>
+                            <option value="5">5 Trabajadores (P0 - P4)</option>
+                        </select>
+                    </div>
+                    <div class="config-input-group">
+                        <label for="config-num-r">Tipos de Herramientas (Recursos):</label>
+                        <select id="config-num-r" class="config-select">
+                            <option value="1">1 Recurso: Martillos (A)</option>
+                            <option value="2" selected>2 Recursos: Martillos (A) y Taladros (B)</option>
+                            <option value="3">3 Recursos: Martillos (A), Taladros (B) y Llaves (C)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="config-section-title">Matrices de Asignación, Máximos y Recursos Totales:</div>
+                <div id="config-table-container" class="config-table-wrapper"></div>
+
+                <div id="config-error-box" class="config-error-box"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('modal-config').classList.remove('active')">
+                    Cancelar
+                </button>
+                <button id="btn-save-config" class="btn btn-primary">
+                    💾 Aplicar y Comenzar Simulación
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Guía Didáctica para la Exposición -->
+    <div id="modal-guide" class="modal-backdrop">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>📖</span>
+                    <span>Guía Didáctica para la Exposición</span>
+                </div>
+                <button id="modal-guide-close" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="font-size: 0.88rem; line-height: 1.6;">
+                <h3 style="color: var(--primary); font-size: 1rem; margin-bottom: 6px;">Metáfora del Taller y Sistemas Operativos</h3>
+                <ul style="margin-left: 20px; margin-top: 6px; margin-bottom: 12px;">
+                    <li><strong>Trabajador:</strong> Proceso que ejecuta tareas.</li>
+                    <li><strong>Herramientas (Martillo A, Taladro B, Llave C):</strong> Tipos de recursos reutilizables.</li>
+                    <li><strong>El Banquero (Don Ramón):</strong> Administrador de recursos del Sistema Operativo.</li>
+                    <li><strong>Herramientas libres en el almacén:</strong> Vector <em>Disponible (Available)</em>.</li>
+                    <li><strong>Herramientas en la mesa del trabajador:</strong> Matriz <em>Asignado (Allocation)</em>.</li>
+                    <li><strong>Máximo de herramientas declaradas:</strong> Matriz <em>Máximo (Max)</em>.</li>
+                    <li><strong>Necesidad:</strong> <em>Need = Max - Allocation</em>.</li>
+                </ul>
+
+                <h3 style="color: var(--primary); font-size: 1rem; margin-bottom: 6px;">Guión de Exposición (2 Minutos)</h3>
+                <ol style="margin-left: 20px; display: flex; flex-direction: column; gap: 8px;">
+                    <li>
+                        <strong>Escenario 1 (Aprender):</strong> Disponible inicial = (2, 2). Pulsa <em>"Paso 1: P1 pide [1, 0]"</em>. El banquero aprueba con la secuencia &lt;P1, P0, P2&gt;. Pulsa <em>"Aplicar Préstamo"</em> para ver a P1 caminar al almacén sin mover su mesa. Pulsa <em>"Paso 2: P1 Trabaja y Termina"</em>: P1 trabaja y devuelve todo, elevando el Disponible a (3, 3).
+                    </li>
+                    <li>
+                        <strong>Escenario 2 (Préstamo Peligroso):</strong> Cambia al Escenario 2. Pulsa <em>"Caso A: P4 pide [3, 3, 0]"</em>. Hay herramientas en almacén, pero el banquero ordena esperar porque dejaría el taller en un estado inseguro. Pulsa <em>"Ver Ensayo de Seguridad"</em> para mostrar el análisis paso a paso en el libro de cuentas. Luego contrasta con <em>"Caso B: P1 pide [1, 0, 2]"</em> que sí es seguro.
+                    </li>
+                    <li>
+                        <strong>Configuración y Matrices:</strong> Muestra el botón <em>"Configurar Taller"</em> para ingresar cualquier matriz y valida matemáticamente la conservación de recursos.
+                    </li>
+                </ol>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="document.getElementById('modal-guide').classList.remove('active')">
+                    ¡Entendido, listo!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pie de Página -->
+    <footer class="app-footer">
+        <div>
+            <strong>Taller Banquero</strong> — Simulador Educativo del Algoritmo del Banquero.
+        </div>
+        <div>
+            Listo para exposición y GitHub Pages.
+        </div>
+    </footer>
+
+    <!-- Scripts de la Aplicación -->
+    <script src="banker.js"></script>
+    <script src="simulation.js"></script>
+</body>
+</html>
